@@ -1,0 +1,83 @@
+<!--
+* Copyright (C) 2012, Freescale Semiconductor, Inc. All Rights Reserved.
+* The CFG element contains a list of recognized usb devices.
+*  DEV elements provide a name, class, vid and pid for each device.
+*
+* Each LIST element contains a list of update instructions.
+*  "Install" - Erase media and install firmware.
+*  "Update" - Update firmware only.
+*
+* Each CMD element contains one update instruction of attribute type.
+*  "pull" - Does UtpRead(body, file) transaction.
+*  "push" - Does UtpWrite(body, file) transaction.
+*  "drop" - Does UtpCommand(body) then waits for device to disconnect.
+*  "boot" - Finds configured device, forces it to "body" device and downloads "file".
+*  "find" - Waits for "timeout" seconds for the "body" device to connect.
+*  "show" - Parse and show device info in "file".  
+-->
+
+
+<UCL>
+  <CFG>
+    <STATE name="BootStrap" dev="MX6UL" vid="15A2" pid="007D"/>
+    <STATE name="Updater"   dev="MSC" vid="066F" pid="37FF"/>
+  </CFG>
+
+  <LIST name="k6206_debug" desc="debug k6206 board">
+    <CMD state="BootStrap" type="boot" body="BootStrap" file ="firmware/u-boot.imx" ifdev="MX6UL">Loading U-boot</CMD>
+    <CMD state="BootStrap" type="jump" > Jumping to OS image. </CMD>
+
+  </LIST>
+
+
+  <LIST name="imx6ul-console-ddr512m-nand" desc="Choose 512m ddr3 nand as media">
+    <CMD state="BootStrap" type="boot" body="BootStrap" file ="firmware/u-boot-imx6ul%6uluboot%_512m.imx" ifdev="MX6UL">Loading U-boot</CMD>
+    <CMD state="BootStrap" type="load" file="firmware/zImage-nand" address="0x80800000"
+        loadSection="OTH" setSection="OTH" HasFlashHeader="FALSE" ifdev="MX6SL MX6SX MX7D MX6UL">Loading Kernel.</CMD>
+    <CMD state="BootStrap" type="load" file="firmware/%initramfs%" address="0x83800000"
+        loadSection="OTH" setSection="OTH" HasFlashHeader="FALSE" ifdev="MX6SL MX6SX MX7D MX6UL">Loading Initramfs.</CMD>
+    <CMD state="BootStrap" type="load" file="firmware/imx6ul-14x14-evk-gpmi.dtb" address="0x83000000"
+            loadSection="OTH" setSection="OTH" HasFlashHeader="FALSE" ifdev="MX6UL">Loading device tree.</CMD>
+    <CMD state="BootStrap" type="jump" > Jumping to OS image. </CMD>
+
+    <!-- create partition -->
+    <CMD state="Updater" type="push" body="$ cat /proc/mtd ">display the mtd partion!</CMD>
+       
+    <!-- burn uboot -->
+    <!-- access boot partition -->
+    <CMD state="Updater" type="push" body="$ flash_eraseall /dev/mtd0">clear u-boot arg</CMD>
+    <CMD state="Updater" type="push" body="send" file="files/linux/u-boot-nand-512.imx" ifdev="MX6UL">Sending u-boot.imx</CMD>
+    <CMD state="Updater" type="push" body="$ ls $FILE">write U-Boot to Nandflash</CMD>
+    <CMD state="Updater" type="push" body="$ kobs-ng init -x $FILE ">write U-Boot to Nandflash</CMD>
+    <!-- burn zImage -->
+    <CMD state="Updater" type="push" body="$ flash_eraseall /dev/mtd2">clear mtd2</CMD>
+    <CMD state="Updater" type="push" body="$ flash_eraseall /dev/mtd4">clear mtd4</CMD>
+    <CMD state="Updater" type="push" body="send" file="files/linux/zImage-nand">Sending kernel zImage</CMD>
+    <CMD state="Updater" type="push" body="$ nandwrite -p /dev/mtd4 $FILE">write kernel image to nandflash</CMD>
+    <!-- burn logo -->
+    <CMD state="Updater" type="push" body="$ flash_eraseall /dev/mtd1">clear mtd1</CMD>
+    
+    <!-- burn dtb -->
+    <CMD state="Updater" type="push" body="$ flash_eraseall /dev/mtd3">clear mtd3</CMD>
+    <CMD state="Updater" type="push" body="send" file="files/linux/dtb/imx6ul-14x14-evk-gpmi-7.dtb" ifdev="MX6UL">Sending Device Tree file</CMD>
+    <CMD state="Updater" type="push" body="$ nandwrite -p /dev/mtd3 $FILE " ifdef="MX6UL">write device tree to nandflash</CMD>
+    <CMD state="Updater" type="push" body="send" file="files/linux/dtb/imx6ul-14x14-evk-gpmi-7.dtb" ifdev="MX6UL">Sending Device Tree file</CMD>
+    <CMD state="Updater" type="push" body="$ nandwrite -s 0x40000 -p /dev/mtd3 $FILE " ifdef="MX6UL">write device tree to nandflash</CMD>
+    <CMD state="Updater" type="push" body="send" file="files/linux/dtb/imx6ul-14x14-evk-gpmi-8-r.dtb" ifdev="MX6UL">Sending Device Tree file</CMD>
+    <CMD state="Updater" type="push" body="$ nandwrite -s 0x80000 -p /dev/mtd3 $FILE " ifdef="MX6UL">write device tree to nandflash</CMD>
+    <CMD state="Updater" type="push" body="send" file="files/linux/dtb/imx6ul-14x14-evk-gpmi-10.4-r.dtb" ifdev="MX6UL">Sending Device Tree file</CMD>
+    <CMD state="Updater" type="push" body="$ nandwrite -s 0xc0000 -p /dev/mtd3 $FILE " ifdef="MX6UL">write device tree to nandflash</CMD>
+    <CMD state="Updater" type="push" body="send" file="files/linux/dtb/imx6ul-14x14-evk-gpmi-4.3-r.dtb" ifdev="MX6UL">Sending Device Tree file</CMD>
+    <CMD state="Updater" type="push" body="$ nandwrite -s 0x100000 -p /dev/mtd3 $FILE " ifdef="MX6UL">write device tree to nandflash</CMD>
+  
+    <!-- burn rootfs -->
+    <CMD state="Updater" type="push" body="$ flash_eraseall /dev/mtd5">clear mtd5</CMD>
+    <CMD state="Updater" type="push" body="$ mkdir -p /mnt/nand">make a directory!</CMD>
+    <CMD state="Updater" type="push" body="$ mount -t yaffs2 /dev/mtdblock5 /mnt/nand"/>
+    <CMD state="Updater" type="push" body="pipe tar -jxv -C /mnt/nand" file="files/linux/console/rootfs.tar.bz2" ifdev="MX6UL MX7D">Sending and writting rootfs</CMD>
+    <CMD state="Updater" type="push" body="frf">Finishing console software write</CMD>
+    <CMD state="Updater" type="push" body="$ umount /mnt/nand">Unmounting rootfs partition</CMD>
+    <CMD state="Updater" type="push" body="$ echo Update Complete!">Done</CMD>
+  </LIST>
+  
+</UCL>
